@@ -3,4 +3,8 @@ name = "monochord"
 version = "0.1.0"
 authors = ["Сухарик <suhr@i2pmail.org>"]
 
+description = "A musical tunings library"
+license = "MIT"
+repository = "https://github.com/suhr/monochord"
+
 [dependencies]
