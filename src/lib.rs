@@ -57,6 +57,10 @@ impl Cents {
     pub fn from_ratio(ratio: f32) -> Cents {
         Cents(1200.0 * ratio.log2())
     }
+
+    pub fn to_ratio(self) -> f32 {
+        (self.0 / 1200.0).exp2()
+    }
 }
 
 impl Add<Cents> for Cents {

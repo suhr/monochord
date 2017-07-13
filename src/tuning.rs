@@ -1,5 +1,7 @@
 use super::{Hz, Cents};
 
+use std::iter::IntoIterator;
+
 const A440: Hz = Hz(440.0);
 
 /// A general trait for tunings.
@@ -89,6 +91,80 @@ impl Tuning for EqualSteps {
 }
 
 #[derive(Debug, Clone)]
+/// A cyclic tuning is like a spiral: repeats while growing
+///
+/// A simple example:
+///
+/// ```rust
+/// # use monochord::{Hz, Cents};
+/// # use monochord::tuning::{Tuning, CyclicTuning};
+/// let tuning = CyclicTuning::from_ratios(&[
+///     5.0 / 4.0,
+///     3.0 / 2.0,
+///     2.0_f32
+/// ], Hz(440.0));
+///
+/// println!("{:?}", tuning.pitch(0).unwrap()); // => Cents(440.0)
+/// println!("{:?}", tuning.pitch(1).unwrap()); // => Cents(550.0)
+/// println!("{:?}", tuning.pitch(2).unwrap()); // => Cents(660.0)
+/// println!("{:?}", tuning.pitch(3).unwrap()); // => Cents(880.0)
+/// println!("{:?}", tuning.pitch(4).unwrap()); // => Cents(1100.0)
+/// ```
+pub struct CyclicTuning {
+    steps: Vec<Cents>,
+    reference: Hz,
+}
+
+impl CyclicTuning {
+    /// Create a cyclic tuning from cents
+    ///
+    /// `Cents(0.0)` should be excluded and the last interval is the period
+    pub fn from_cents<'a, I: IntoIterator<Item=&'a Cents>>(steps: I, reference: Hz) -> Self {
+        let steps = steps.into_iter().cloned().collect();
+        CyclicTuning {
+            steps, reference
+        }
+    }
+
+    /// Create a cyclic tuning from cents
+    ///
+    /// `1.0` should be excluded and the last interval is the period
+    pub fn from_ratios<'a, I: IntoIterator<Item=&'a f32>>(steps: I, reference: Hz) -> Self {
+        let steps = steps.into_iter().map(|r| Cents::from_ratio(*r)).collect();
+        CyclicTuning {
+            steps, reference
+        }
+    }
+}
+
+impl Tuning for CyclicTuning {
+    fn reference_pitch(&self) -> Hz {
+        self.reference
+    }
+
+    fn pitch(&self, step: i32) -> Option<Hz> {
+        if self.steps.len() == 0 {
+            return Some(self.reference)
+        }
+
+        let len = self.steps.len() as i32;
+        let last = *self.steps.last().unwrap();
+        let (rem, div) = (step % len, step / len);
+
+        let hz = if rem == 0 {
+            self.reference + last * div as f32
+        } else {
+            let step =
+                if rem > 0 { self.steps[(rem - 1) as usize] }
+                else { self.steps[(len + rem - 1) as usize] - last };
+            self.reference + (last * div as f32 + step)
+        };
+
+        Some(hz)
+    }
+}
+
+#[derive(Debug, Clone)]
 /// A map from MIDI notes to pitches
 /// 
 /// This is what your synth should actually use
@@ -154,5 +230,22 @@ impl ::std::ops::Index<usize> for MidiTuning {
     type Output = Hz;
     fn index(&self, index: usize) -> &Hz {
         &self.pitches[index]
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test] fn cyclic_tuning() {
+        let tuning = CyclicTuning::from_ratios(&[
+            3.0 / 2.0,
+            2.0_f32
+        ], Hz(440.0));
+
+        assert_eq!(tuning.pitch(0).unwrap().0, 440.0);
+        assert_eq!(tuning.pitch(1).unwrap().0.round(), 660.0_f32);
+        assert_eq!(tuning.pitch(3).unwrap().0.round(), 1320.0_f32);
+        assert_eq!(tuning.pitch(-1).unwrap().0.round(), 330.0_f32);
+        assert_eq!(tuning.pitch(-3).unwrap().0.round(), 165.0_f32);
     }
 }
