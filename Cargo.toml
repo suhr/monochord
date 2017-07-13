@@ -1,6 +1,6 @@
 [package]
 name = "monochord"
-version = "0.1.0"
+version = "0.1.1"
 authors = ["Сухарик <suhr@i2pmail.org>"]
 
 description = "A musical tunings library"
