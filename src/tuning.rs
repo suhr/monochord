@@ -48,13 +48,13 @@ impl Tuning for Edo {
     }
 
     fn pitch(&self, step: i32) -> Option<Hz> {
-        let int = Cents(1200.0 / self.cardinality as f32) * step as f32;
+        let int = Cents(1200.0 / f32::from(self.cardinality)) * step as f32;
         Some(self.reference + int)
     }
 
     fn interval(&self, from: i32, to: i32) -> Option<Cents> {
         let delta = (to - from) as f32;
-        Some(Cents(1200.0 / self.cardinality as f32 * delta))
+        Some(Cents(1200.0 / f32::from(self.cardinality) * delta))
     }
 }
 
@@ -143,7 +143,7 @@ impl Tuning for CyclicTuning {
     }
 
     fn pitch(&self, step: i32) -> Option<Hz> {
-        if self.steps.len() == 0 {
+        if self.steps.is_empty() {
             return Some(self.reference)
         }
 
@@ -179,7 +179,7 @@ impl MidiTuning {
 
         let mut pitches = Vec::with_capacity(127);
         for i in 0..127 {
-            if let Some(hz) = tuning.pitch(i - refkey as i32) {
+            if let Some(hz) = tuning.pitch(i - i32::from(refkey)) {
                 pitches.push(hz)
             }
             else {
